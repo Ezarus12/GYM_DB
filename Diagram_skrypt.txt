@@ -1,0 +1,62 @@
+// Use DBML to define your database structure
+// Docs: https://dbml.dbdiagram.io/docs
+
+Table Placówki {
+  PlacówkaID integer 
+  Adres VARCHAR(255)
+	Miasto VARCHAR(50)
+	KodPocztowy VARCHAR(6)
+}
+
+TABLE Pracownicy {
+	ID INT [primary key]
+	Imie VARCHAR(30)
+	Nazwisko VARCHAR(50)
+	Stanowisko VARCHAR(30)
+	Pensja DECIMAL(10,2)
+	DataZatrudnienia DATE
+	PlacowkaID int
+}
+
+TABLE Karnety {
+	KarnetID INT [primary key]
+	Nazwa VARCHAR(50)
+	Cena DECIMAL(10,2)
+}
+
+TABLE Klienci {
+	KlientID INT [primary key]
+	Imie varchar
+	Nazwisko varchar
+	Email varchar
+	DataUrodzenia date
+	KarnetID INT
+  ZajęcieID INT
+}
+
+TABLE Opłaty {
+	OpłataID INT [primary key]
+	Kwota DECIMAL(10,2)
+	KlientID INT
+	KarnetID INT
+	DataWplaty date
+}
+
+TABLE Zajęcia {
+	ZajęcieID INT [primary key]
+	Nazwa VARCHAR(100)
+	InstruktorID INT
+	DataZajęć date
+}
+
+Ref: Placówki.PlacówkaID < Pracownicy.PlacowkaID
+
+Ref: Klienci.KarnetID > Karnety.KarnetID
+
+Ref: Opłaty.KlientID > Klienci.KlientID
+
+Ref: Opłaty.KarnetID > Karnety.KarnetID
+
+Ref: Zajęcia.InstruktorID < Pracownicy.ID
+
+Ref: Zajęcia.ZajęcieID < Klienci.ZajęcieID
