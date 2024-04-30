@@ -1,0 +1,333 @@
+CREATE DATABASE Silownia;
+
+USE Silownia;
+
+CREATE TABLE Placowki (
+	PlacowkaID INT PRIMARY KEY AUTO_INCREMENT,
+	Adres VARCHAR(255),
+	Miasto VARCHAR(50),
+	KodPocztowy VARCHAR(6)
+);
+
+CREATE TABLE Pracownicy (
+	PracownikID INT PRIMARY KEY AUTO_INCREMENT,
+	Imie VARCHAR(30),
+	Nazwisko VARCHAR(50),
+	Stanowisko VARCHAR(30),
+	Pensja DECIMAL(10,2),
+	DataZatrudnienia DATE,
+	PlacowkaID INT,
+	FOREIGN KEY (PlacowkaID) REFERENCES Placowki(PlacowkaID)
+);
+
+CREATE TABLE Zajecia (
+	ZajecieID INT PRIMARY KEY AUTO_INCREMENT,
+	Nazwa VARCHAR(100),
+	InstruktorID INT,
+	DataZajec DATE,
+	FOREIGN KEY (InstruktorID) REFERENCES Pracownicy(PracownikID)
+);
+
+CREATE TABLE Karnety (
+	KarnetID INT PRIMARY KEY AUTO_INCREMENT,
+	Nazwa VARCHAR(50),
+	Cena DECIMAL(10,2)
+);
+
+CREATE TABLE Klienci (
+	KlientID INT PRIMARY KEY AUTO_INCREMENT,
+	Imie VARCHAR(30),
+	Nazwisko VARCHAR(50),
+	Email VARCHAR(100),
+	DataUrodzenia DATE,
+	KarnetID INT,
+    ZajecieID INT,
+	FOREIGN KEY (KarnetID) REFERENCES Karnety(KarnetID),
+    FOREIGN KEY (ZajecieID) REFERENCES Zajecia(ZajecieID)
+);
+
+CREATE TABLE Oplaty (
+	OplataID INT PRIMARY KEY,
+	Kwota DECIMAL(10,2),
+	KlientID INT,
+	KarnetID INT,
+	DataWplaty DATE,
+	FOREIGN KEY (KlientID) REFERENCES Klienci(KlientID),
+	FOREIGN KEY (KarnetID) REFERENCES Karnety(KarnetID)
+);    
+
+CREATE TABLE Logi (
+	WydarzenieID INT PRIMARY KEY AUTO_INCREMENT,
+    Wydarzenie VARCHAR(100),
+    Tabela VARCHAR(30),
+    Czas TIME
+);
+
+DELIMITER $$
+CREATE TRIGGER logPracownicy
+AFTER INSERT ON Pracownicy
+FOR EACH ROW
+BEGIN
+    INSERT INTO Logi (Wydarzenie, Tabela, Czas)
+    VALUES ('Dodano pracownika', 'Pracownicy', NOW());
+END$$
+
+DELIMITER $$
+CREATE TRIGGER logKlienci
+AFTER INSERT ON Klienci
+FOR EACH ROW
+BEGIN
+    INSERT INTO Logi (Wydarzenie, Tabela, Czas)
+    VALUES ('Dodano klienta', 'Klienci', NOW());
+END$$
+DELIMITER ;
+
+DELIMITER $$
+CREATE TRIGGER walidacja_oplaty
+BEFORE INSERT ON Oplaty
+FOR EACH ROW
+BEGIN
+    IF NEW.DataWplaty > CURDATE() THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Data zakupu nie może być późniejsza niż dzisiejsza data';
+    END IF;
+END$$
+DELIMITER ;
+
+INSERT INTO Placowki (PlacowkaID, Adres, Miasto, KodPocztowy)
+VALUES (1, 'ul. Krucza 30', 'Warszawa', '00-001'),
+       (2, 'ul. Marszałkowska 21', 'Warszawa', '01-322'),
+       (3, 'ul. Powstańców Śląskich 13', 'Warszawa', '03-003');
+       
+INSERT INTO Pracownicy (Imie, Nazwisko, Stanowisko, Pensja, DataZatrudnienia, PlacowkaID)
+VALUES ('Marek', 'Wróbel', 'Manager', 7000.00, '2023-03-25', 1),                        
+	   ('Jan', 'Kowalski', 'Trener personalny', 5400.00, '2024-04-20', 1), 				
+       ('Anna', 'Nowak', 'Trener personalny', 4200.00, '2024-04-21', 1),
+       ('Piotr', 'Wiśniewski', 'Recepcjonista', 4000.00, '2024-04-22', 1),
+       ('Ewa', 'Dąbrowska', 'Recepcjonista', 4400.00, '2024-04-23', 1),
+       ('Marta', 'Lewandowska', 'Pracownik porządkowy', 4000.00, '2024-04-24', 1),
+       ('Agata', 'Dobrowolska', 'Manager', 7500.00, '2023-03-25', 2),                  
+       ('Adam', 'Nowak', 'Trener personalny', 5500.00, '2024-04-20', 2), 				
+       ('Karolina', 'Kowalczyk', 'Trener personalny', 5000.00, '2024-04-21', 2),
+       ('Tomasz', 'Jankowski', 'Recepcjonista', 4200.00, '2024-04-22', 2),
+       ('Izabela', 'Zielińska', 'Recepcjonista', 4000.00, '2024-04-23', 2),
+       ('Marcin', 'Wójcik', 'Trener personalny', 4000.00, '2024-04-24', 2),
+       ('Kamil', 'Wiśniewski', 'Manager', 6900.00, '2023-03-25', 3),                              
+       ('Katarzyna', 'Kaczmarek', 'Trener personalny', 4200.00, '2024-04-20', 3), 		
+       ('Paweł', 'Lis', 'Trener personalny', 4000.00, '2024-04-21', 3),
+       ('Aleksandra', 'Woźniak', 'Recepcjonista', 4200.00, '2024-04-22', 3),
+       ('Michał', 'Szymański', 'Recepcjonista', 3900.00, '2024-04-23', 3),
+       ('Natalia', 'Wilk', 'Pracownik porządkowy', 3400.00, '2024-04-24', 3);
+
+INSERT INTO Zajecia (Nazwa, InstruktorID, DataZajec)
+VALUES ('Zumba', 2, '2024-08-30'),
+       ('Pilates', 2, '2024-06-26'),
+       ('Spinning', 3, '2024-07-02'),
+       ('CrossFit', 14, '2024-06-11'),
+       ('Yoga', 15, '2024-06-04'),
+       ('Pływanie', 3, '2024-06-05'),
+       ('Aerobik', 9, '2024-07-21'),
+       ('Boks', 8, '2024-06-17');
+
+INSERT INTO Karnety (Nazwa, Cena)
+VALUES ('Adult Open', 150.00),
+	   ('Adult Lite', 100.00),
+       ('Student Open', 100.00),
+       ('Student Lite', 70.00);
+
+INSERT INTO Klienci (Imie, Nazwisko, Email, DataUrodzenia, KarnetID, ZajecieID)
+VALUES
+('Adam', 'Nowak', 'adam.nowak@poczta.com', '1972-05-15', 1, 1),
+('Anna', 'Kowalska', 'anna.kowalska@email.com', '1982-07-20', 1, 2),
+('Michał', 'Wiśniewski', 'michal.wisniewski@email.com', '1984-09-10', 2, 3),
+('Karolina', 'Lis', 'karolina.lis@poczta.com', '1995-11-25', 2, 4),
+('Piotr', 'Zieliński', 'piotr.zielinski@pocztex.com', '1990-03-12', 1, 3),
+('Aleksandra', 'Kaczmarek', 'aleksandra.kaczmarek@pocztex.com', '1991-06-28', 1, 6),
+('Marta', 'Woźniak', 'marta.wozniak@poczta.com', '1993-08-03', 1, 7),
+('Tomasz', 'Szymański', 'tomasz.szymanski@email.com', '1989-10-17', 2, 8),
+('Katarzyna', 'Wilk', 'katarzyna.wilk@poczta.com', '1963-04-05', 1, 2),
+('Marcin', 'Lewandowski', 'marcin.lewandowski@poczta.com', '1989-05-22', 1, 3),
+('Natalia', 'Dąbrowska', 'natalia.dabrowska@poczta.com', '2002-07-07', 3, 6),
+('Wojciech', 'Nowicki', 'wojciech.nowicki@poczta.com', '2003-09-30', 4, 7),
+('Izabela', 'Jankowska', 'izabela.jankowska@email.com', '2004-11-14', 3, 1),
+('Łukasz', 'Kowalczyk', 'lukasz.kowalczyk@email.com', '2003-01-01', 3, 8),
+('Patrycja', 'Zając', 'patrycja.zajac@poczta.com', '2001-02-16', 3, 3),
+('Damian', 'Adamczyk', 'damian.adamczyk@email.com', '2000-04-03', 4, 1),
+('Klaudia', 'Michalska', 'klaudia.michalska@poczta.com', '2002-06-18', 4, 5),
+('Bartosz', 'Wójcik', 'bartosz.wojcik@pocztex.com', '2002-08-05', 3, 4),
+('Kamila', 'Pawlak', 'kamila.pawlak@poczta.com', '2004-10-20', 3, 7),
+('Tomasz', 'Grosicki', 'tomasz.grosicki@pocztex.com', '2002-03-23', 4, 7);
+
+
+INSERT INTO Oplaty (OplataID, Kwota, KlientID, KarnetID, DataWplaty)
+VALUES 
+(1, 150.00, 1, 1, '2023-04-01'), 
+(2, 150.00, 2, 1, '2023-04-01'), 
+(3, 100.00, 3, 2, '2023-04-02'), 
+(4, 100.00, 4, 2, '2023-04-02'), 
+(5, 150.00, 5, 1, '2023-04-03'), 
+(6, 150.00, 6, 1, '2023-04-03'), 
+(7, 150.00, 7, 1, '2023-04-04'), 
+(8, 100.00, 8, 2, '2023-04-04'), 
+(9, 150.00, 9, 1, '2023-04-05'), 
+(10, 150.00, 10, 1, '2023-04-05'), 
+(11, 100.00, 11, 3, '2023-04-06'), 
+(12, 70.00, 12, 3, '2023-04-06'), 
+(13, 100.00, 13, 3, '2023-04-07'), 
+(14, 100.00, 14, 3, '2023-04-07'), 
+(15, 100.00, 15, 3, '2023-04-08'),
+(16, 70.00, 16, 4, '2023-04-08'), 
+(17, 70.00, 17, 4, '2023-04-09'), 
+(18, 100.00, 18, 3, '2023-04-09'), 
+(19, 100.00, 19, 1, '2023-04-10'), 
+(20, 70.00, 20, 4, '2023-04-10');
+
+/*-----Indeksy-----*/
+
+CREATE INDEX email_klienta_idx ON Klienci(Email);
+CREATE INDEX oplaty_klienta_idx ON Oplaty(KlientID);
+CREATE INDEX nazwisko_imie_klienta_idx ON Klienci(Nazwisko, Imie);
+CREATE INDEX nazwisko_imie_pracownika_idx ON Pracownicy(Nazwisko, Imie);
+
+/*-----Procedury-----*/
+
+DELIMITER $$
+CREATE PROCEDURE DodajPracownika(
+	IN pImie VARCHAR(30),
+	IN pNazwisko VARCHAR(50),
+	IN pStanowisko VARCHAR(30),
+	IN pPensja DECIMAL(10,2),
+	IN pDataZatrudnienia DATE,
+    IN pPlacowkaID INT
+)
+BEGIN
+	INSERT INTO Pracownicy(Imie, Nazwisko, Stanowisko, Pensja, DataZatrudnienia, PlacowkaID)
+    VALUES (pImie, pNazwisko, pStanowisko, pPensja, pDataZatrudnienia, pPlacowkaID);
+END $$
+DELIMITER ;
+
+DELIMITER $$
+CREATE PROCEDURE DodajKlienta(
+	IN pImie VARCHAR(30),
+	IN pNazwisko VARCHAR(50),
+	IN pEmail VARCHAR(100),
+	IN pDataUrodzenia DATE,
+	IN pKarnetID INT,
+    IN pZajecieID INT
+)
+BEGIN
+	INSERT INTO Klienci(Imie, Nazwisko, Email, DataUrodzenia, KarnetID, ZajecieID)
+    VALUES (pImie, pNazwisko, pEmail, pDataUrodzenia, pKarnetID, pZajecieID);
+END $$
+DELIMITER ;
+
+/*-----Wywołanie procedur-----*/
+
+CALL DodajPracownika('Marek', 'Kowal', 'Recepcjonista', 4200.00, '2024-03-14', 1);
+
+CALL DodajKlienta('Marcin', 'Dobrowolski', 'marek@poczta.pl', '1993-07-21', 2, 1);
+
+/*-----Zapytania Łączone-----*/
+
+/*WHERE*/
+/*Pokaz wszystkie zajecia w danej placowce*/
+SELECT pl.PlacowkaID, pl.Adres, z.Nazwa FROM Zajecia z
+JOIN Pracownicy p ON z.InstruktorID = p.PracownikID
+JOIN Placowki pl ON p.PlacowkaID = pl.PlacowkaID
+WHERE p.PlacowkaID = pl.PlacowkaID;
+
+/*NATURAL JOIN*/
+/*Pokaz wszystkie wykonane przez klientów opłaty i typy karnetow*/
+SELECT Klienci.Imie, Klienci.Nazwisko, Oplaty.Kwota, Karnety.Nazwa
+FROM Klienci
+NATURAL JOIN Oplaty
+NATURAL JOIN Karnety;
+
+/*INNER JOIN*/
+/*Pokaz trenera zajec oraz przypisanych mu klientow*/
+SELECT CONCAT(Pracownicy.Imie, ' ', Pracownicy.Nazwisko) AS Trener, CONCAT(Klienci.Imie, ' ', Klienci.Nazwisko) AS Klient
+FROM Pracownicy
+INNER JOIN Zajecia ON Pracownicy.PracownikID = Zajecia.InstruktorID
+INNER JOIN Klienci ON Zajecia.ZajecieID = Klienci.ZajecieID
+ORDER BY Trener;
+
+/*LEFT OUTER JOIN JOIN*/
+/*Pokaz trenera zajec oraz przypisanych mu klientow*/
+SELECT CONCAT(Pracownicy.Imie, ' ', Pracownicy.Nazwisko) AS Pracownik, IFNULL(Zajecia.Nazwa, 'Brak prowadzonych zajec') AS Zajecia, IFNULL(CONCAT(Klienci.Imie, ' ', Klienci.Nazwisko), '-') AS ZapisanyKlient
+FROM Pracownicy
+LEFT OUTER JOIN Zajecia ON PracownikID = InstruktorID
+LEFT OUTER JOIN Klienci ON Zajecia.ZajecieID = Klienci.ZajecieID
+ORDER BY Zajecia.ZajecieID DESC;
+
+/*LEFT OUTER JOIN JOIN*/
+/*Pokaz wszystkie wplaty od najnowszych wraz z nazwa karnetu i wplacajacym*/
+SELECT Oplaty.DataWplaty, Oplaty.Kwota, Karnety.Nazwa AS Karnet, CONCAT(Klienci.Imie, ' ', Klienci.Nazwisko) AS Wplacajacy
+FROM Oplaty
+RIGHT OUTER JOIN Klienci ON Oplaty.KlientID = Klienci.KlientID
+RIGHT OUTER JOIN Karnety ON Oplaty.KarnetID = Karnety.KarnetID
+ORDER BY Oplaty.DataWplaty DESC;
+
+
+/*-----Zapytania z klauzulami-----*/
+
+/*Pokaz w ktorej placowce wydatki na pensje pracownikow sa najwieksze*/
+SELECT Placowki.Adres, SUM(Pracownicy.Pensja) AS PensjePracownikow
+FROM Placowki
+JOIN Pracownicy ON Placowki.PlacowkaID = Pracownicy.PlacowkaID
+GROUP BY Placowki.PlacowkaID
+ORDER BY PensjePracownikow DESC;
+
+/*Pokaz karnety, ktore wykupuja conajmniej 5 klientow*/
+SELECT Karnety.Nazwa, COUNT(Klienci.KlientID) AS IloscSubskrybentow
+FROM Karnety
+JOIN Klienci ON Karnety.KarnetID = Klienci.KarnetID
+GROUP BY Karnety.KarnetID
+Having IloscSubskrybentow > 5;
+
+/*Pokaz klientow urodzonych w latach 90'tych oraz zajecia na jakie sa zapisani*/
+SELECT CONCAT(Klienci.Imie, ' ', Klienci.Nazwisko) AS Klient, Zajecia.Nazwa
+FROM Klienci
+JOIN Zajecia ON Zajecia.ZajecieID = Klienci.ZajecieID
+WHERE Klienci.DataUrodzenia BETWEEN '1990-01-01' AND '1999-12-31'
+ORDER BY Zajecia.Nazwa;
+
+/*Pokaz klientow z adresem email w domenie '@email'*/
+SELECT CONCAT(Klienci.Imie, ' ', Klienci.Nazwisko) AS Klient, Klienci.Email
+FROM Klienci
+WHERE Klienci.Email LIKE '%@email%';
+
+/*Pokaz laczny przychod kazdej z placowek*/
+SELECT Placowki.PlacowkaID, Placowki.Adres, SUM(Oplaty.Kwota) AS Przychod
+FROM Placowki
+JOIN Pracownicy ON Placowki.PlacowkaID = Pracownicy.PlacowkaID
+JOIN Zajecia ON Pracownicy.PracownikID = Zajecia.InstruktorID
+JOIN Klienci ON Zajecia.ZajecieID = Klienci.ZajecieID
+JOIN Oplaty ON Klienci.KlientID = Oplaty.KlientID
+GROUP BY Placowki.PlacowkaID
+ORDER BY Przychod DESC;
+
+/*-----Zapytania dodatkowe-----*/
+
+/*Pokaz do ktorej placowki chodzi najwiecej klientow na zajecia*/
+SELECT Placowki.Adres, COUNT(Klienci.KlientID) AS UczeszczajacyK*lienci
+FROM Placowki
+JOIN Pracownicy ON Placowki.PlacowkaID = Pracownicy.PlacowkaID
+JOIN Zajecia ON Pracownicy.PracownikID = Zajecia.InstruktorID
+JOIN Klienci ON Zajecia.ZajecieID = Klienci.ZajecieID
+GROUP BY Placowki.PlacowkaID;
+
+SELECT * FROM Pracownicy;
+
+SELECT * FROM Klienci;
+
+SELECT * FROM Karnety;
+
+SELECT * FROM Oplaty;
+
+SELECT * FROM Placowki;
+
+SELECT * FROM Zajecia;
+
+DROP DATABASE Silownia;
+
+
+DROP PROCEDURE DodajKlienta;
