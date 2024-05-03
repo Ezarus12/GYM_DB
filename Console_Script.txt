@@ -130,7 +130,7 @@ VALUES ('Zumba', 2, '2024-08-30'),
 
 INSERT INTO Karnety (Nazwa, Cena)
 VALUES ('Adult Open', 150.00),
-	   ('Adult Lite', 100.00),
+       ('Adult Lite', 100.00),
        ('Student Open', 100.00),
        ('Student Lite', 70.00);
 
@@ -308,7 +308,7 @@ ORDER BY Przychod DESC;
 /*-----Zapytania dodatkowe-----*/
 
 /*Pokaz do ktorej placowki chodzi najwiecej klientow na zajecia*/
-SELECT Placowki.Adres, COUNT(Klienci.KlientID) AS UczeszczajacyK*lienci
+SELECT Placowki.Adres, COUNT(Klienci.KlientID) AS UczeszczajacyKlienci
 FROM Placowki
 JOIN Pracownicy ON Placowki.PlacowkaID = Pracownicy.PlacowkaID
 JOIN Zajecia ON Pracownicy.PracownikID = Zajecia.InstruktorID
@@ -326,8 +326,3 @@ SELECT * FROM Oplaty;
 SELECT * FROM Placowki;
 
 SELECT * FROM Zajecia;
-
-DROP DATABASE Silownia;
-
-
-DROP PROCEDURE DodajKlienta;
