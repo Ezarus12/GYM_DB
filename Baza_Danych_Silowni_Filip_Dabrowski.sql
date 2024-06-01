@@ -47,7 +47,7 @@ CREATE TABLE Klienci (
 );
 
 CREATE TABLE Oplaty (
-	OplataID INT PRIMARY KEY,
+	OplataID INT PRIMARY KEY AUTO_INCREMENT,
 	Kwota DECIMAL(10,2),
 	KlientID INT,
 	KarnetID INT,
@@ -62,6 +62,8 @@ CREATE TABLE Logi (
     Tabela VARCHAR(30),
     Czas TIME
 );
+
+/*-----Triggery-----*/
 
 DELIMITER $$
 CREATE TRIGGER logPracownicy
@@ -83,12 +85,47 @@ END$$
 DELIMITER ;
 
 DELIMITER $$
+
+CREATE TRIGGER walidacjaKoduPocztowego
+BEFORE INSERT ON Placowki
+FOR EACH ROW
+BEGIN
+	IF LENGTH(NEW.KodPocztowy) != 6 THEN
+		SIGNAL SQLSTATE '45000'
+		SET MESSAGE_TEXT = 'Kod pocztowy musi miec 6 znakow';
+	END IF;
+END $$
+
+DELIMITER ;
+
+DELIMITER $$
 CREATE TRIGGER walidacja_oplaty
 BEFORE INSERT ON Oplaty
 FOR EACH ROW
 BEGIN
     IF NEW.DataWplaty > CURDATE() THEN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Data zakupu nie może być późniejsza niż dzisiejsza data';
+    END IF;
+END$$
+DELIMITER ;
+
+DELIMITER $$
+CREATE TRIGGER ZaWysokaOplata
+AFTER INSERT ON Oplaty
+FOR EACH ROW
+BEGIN
+    DECLARE cenaKarnetu DECIMAL(10,2);
+    DECLARE nazwaKarnetu VARCHAR(50);
+    DECLARE IDklienta INT;
+    
+    SELECT Cena, Nazwa, KlientId INTO cenaKarnetu, nazwaKarnetu, IDklienta
+    FROM Karnety
+    JOIN Klienci ON Karnety.KarnetID = Klienci.KarnetID
+    WHERE Klienci.KlientID = NEW.KlientID;
+    
+    IF NEW.Kwota > cenaKarnetu THEN
+        INSERT INTO Logi (Wydarzenie, Tabela, Czas)
+        VALUES (CONCAT('Opłata klienta ', IDklienta, ' za karnet ', nazwaKarnetu, ' jest wyższa niż cena karnetu (', cenaKarnetu, ').'), 'Oplaty', NOW());
     END IF;
 END$$
 DELIMITER ;
@@ -220,11 +257,39 @@ BEGIN
 END $$
 DELIMITER ;
 
+DELIMITER $$
+CREATE PROCEDURE KlientNajwiekszeOplaty()
+BEGIN
+SELECT Klienci.Imie, Klienci.Nazwisko, SUM(Oplaty.Kwota) AS SumaOplat
+FROM Klienci
+JOIN Oplaty ON Klienci.KlientID = Oplaty.KlientID
+GROUP BY Klienci.KlientID
+ORDER BY SumaOplat DESC
+LIMIT 1;
+END$$
+DELIMITER ;
+
+DELIMITER $$
+CREATE PROCEDURE NajczesciejKupowanyKarnet()
+BEGIN
+SELECT Karnety.Nazwa, COUNT(Klienci.KlientID) AS LiczbaSprzedazy
+FROM Karnety
+JOIN Klienci ON Karnety.KarnetID = Klienci.KarnetID
+GROUP BY Karnety.KarnetID
+ORDER BY LiczbaSprzedazy DESC
+LIMIT 1;
+END$$
+DELIMITER ;
+
 /*-----Wywołanie procedur-----*/
 
 CALL DodajPracownika('Marek', 'Kowal', 'Recepcjonista', 4200.00, '2024-03-14', 1);
 
 CALL DodajKlienta('Marcin', 'Dobrowolski', 'marek@poczta.pl', '1993-07-21', 2, 1);
+
+CALL KlientNajwiekszeOplaty();
+
+CALL NajczesciejKupowanyKarnet();
 
 /*-----Zapytania Łączone-----*/
 
@@ -308,7 +373,7 @@ ORDER BY Przychod DESC;
 /*-----Zapytania dodatkowe-----*/
 
 /*Pokaz do ktorej placowki chodzi najwiecej klientow na zajecia*/
-SELECT Placowki.Adres, COUNT(Klienci.KlientID) AS UczeszczajacyK*lienci
+SELECT Placowki.Adres, COUNT(Klienci.KlientID) AS UczeszczajacyKlienci
 FROM Placowki
 JOIN Pracownicy ON Placowki.PlacowkaID = Pracownicy.PlacowkaID
 JOIN Zajecia ON Pracownicy.PracownikID = Zajecia.InstruktorID
@@ -329,5 +394,3 @@ SELECT * FROM Zajecia;
 
 DROP DATABASE Silownia;
 
-
-DROP PROCEDURE DodajKlienta;
